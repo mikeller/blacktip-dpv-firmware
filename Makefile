@@ -352,3 +352,5 @@ debug-start:
 
 size: build/$(PROJECT).elf
 	@$(SZ) $<
+
+.PHONY: distclean
