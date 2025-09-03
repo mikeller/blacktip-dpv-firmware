@@ -3,20 +3,22 @@ ARM_TOOLCHAIN_OS ?= x86_64-linux
 ARM_TOOLCHAIN_URL ?= https://developer.arm.com/-/media/Files/downloads/gnu-rm/9-2020q2/$(ARM_TOOLCHAIN_ARCHIVE)
 ARM_TOOLCHAIN_SHA256 ?=
 
+ifndef BUILD_TOOLS_DIR
 ifndef BUILD_DIR
-  $(error BUILD_DIR must be set before including arm_build_tools.mk)
+  $(error BUILD_TOOLS_DIR or BUILD_DIR must be set before including arm_build_tools.mk)
 endif
 
-BUILD_TOOLS_DIR ?= $(BUILD_DIR)/tools
+BUILD_TOOLS_DIR := $(BUILD_DIR)/tools
+endif
 
 ARM_TOOLCHAIN_ARCHIVE := gcc-arm-none-eabi-$(ARM_TOOLCHAIN_VERSION)-$(ARM_TOOLCHAIN_OS).tar.bz2
 TOOLCHAIN_DIR := $(BUILD_TOOLS_DIR)/gcc-arm-none-eabi-$(ARM_TOOLCHAIN_VERSION)
 TOOLCHAIN_LINK := $(BUILD_TOOLS_DIR)/gcc-arm-none-eabi
 export PATH := $(abspath $(TOOLCHAIN_LINK)/bin):$(PATH)
 
-arm_tools: $(BUILD_TOOLS_DIR)/gcc-arm-none-eabi
+arm_tools: $(TOOLCHAIN_LINK)
 
-$(BUILD_TOOLS_DIR)/gcc-arm-none-eabi:
+$(TOOLCHAIN_LINK):
 	$(MAKE) arm_tools_clean
 	@set -eu; \
 	mkdir -p "$(BUILD_TOOLS_DIR)/dist"; \
@@ -29,13 +31,13 @@ $(BUILD_TOOLS_DIR)/gcc-arm-none-eabi:
 	  echo "Unpacking $(ARM_TOOLCHAIN_ARCHIVE)"; \
 	  tar -xjf "$(BUILD_TOOLS_DIR)/dist/$(ARM_TOOLCHAIN_ARCHIVE)" -C "$(BUILD_TOOLS_DIR)"; \
 	fi; \
-	ln -sfn "$(TOOLCHAIN_DIR)" "$(BUILD_TOOLS_DIR)/gcc-arm-none-eabi"
+	ln -sfn "$(TOOLCHAIN_DIR)" "$(TOOLCHAIN_LINK)"
 
 arm_tools_version:
 	@echo $(ARM_TOOLCHAIN_VERSION)
 
 arm_tools_clean:
-	rm -rf "$(BUILD_TOOLS_DIR)/gcc-arm-none-eabi" "$(TOOLCHAIN_DIR)"
+	rm -rf "$(TOOLCHAIN_LINK)" "$(TOOLCHAIN_DIR)"
 
 distclean: arm_tools_clean
 
