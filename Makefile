@@ -315,6 +315,18 @@ include $(RULESPATH)/rules.mk
 build/$(PROJECT).bin: build/$(PROJECT).elf 
 	$(BIN) build/$(PROJECT).elf build/$(PROJECT).bin --gap-fill 0xFF
 
+BUILD_DIR := $(shell pwd)
+
+include arm_build_tools.mk
+
+ifeq ($(wildcard $(TOOLCHAIN_DIR)/*),)
+ifeq ($(filter $(MAKECMDGOALS),arm_tools arm_tools_version arm_tools_clean distclean),)
+  $(error "No toolchain found in $(TOOLCHAIN_DIR). Please run 'make arm_tools' first.")
+endif
+endif
+
+distclean: clean
+
 # Program
 upload: build/$(PROJECT).bin
 	openocd -f board/stm32f4discovery.cfg -c "reset_config trst_only combined" -c "program build/$(PROJECT).elf verify reset exit"
