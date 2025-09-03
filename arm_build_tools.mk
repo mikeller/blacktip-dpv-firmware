@@ -6,12 +6,14 @@ ARM_TOOLCHAIN_VERSION ?= 10.3-2021.10
 ARM_TOOLCHAIN_PREFIX ?= gcc-arm-none-eabi
 
 ARM_TOOLCHAIN_OS ?=
-ifndef ARM_TOOLCHAIN_OS
+ifeq ($(strip $(ARM_TOOLCHAIN_OS)),)
   UNAME_S := $(shell uname -s 2>/dev/null)
   ifeq ($(UNAME_S),Linux)
     ARM_TOOLCHAIN_OS := x86_64-linux
   else ifeq ($(UNAME_S),Darwin)
     ARM_TOOLCHAIN_OS := mac
+  else ifneq ($(filter MSYS_NT-% MINGW%,$(UNAME_S)),)
+    ARM_TOOLCHAIN_OS := win32
   else ifdef OS
   # Basic Windows detection
     ARM_TOOLCHAIN_OS := win32
@@ -33,9 +35,7 @@ BUILD_TOOLS_DIR := $(BUILD_DIR)/tools
 endif
 
 TOOLCHAIN_DIR := $(BUILD_TOOLS_DIR)/$(ARM_TOOLCHAIN_PREFIX)-$(ARM_TOOLCHAIN_VERSION)
-ifneq ($(wildcard $(TOOLCHAIN_DIR)/bin),)
-  export PATH := $(abspath $(TOOLCHAIN_DIR)/bin):$(PATH)
-endif
+export PATH := $(abspath $(TOOLCHAIN_DIR)/bin):$(PATH)
 
 arm_tools_install: $(TOOLCHAIN_DIR)
 
