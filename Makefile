@@ -247,7 +247,7 @@ MCU  = cortex-m4
 
 #TRGT = arm-elf-
 #TRGT = /home/benjamin/Nextcloud/appimage/gcc-arm-none-eabi-7-2018-q2-update/bin/arm-none-eabi-
-TRGT = arm-none-eabi-
+TRGT ?= $(TOOLCHAIN_DIR)/bin/arm-none-eabi-
 CC   = $(TRGT)gcc
 CPPC = $(TRGT)g++
 # Enable loading with g++ only if you need C++ runtime support.
@@ -320,8 +320,8 @@ BUILD_DIR := $(shell pwd)
 include arm_build_tools.mk
 
 ifeq ($(wildcard $(TOOLCHAIN_DIR)/*),)
-ifeq ($(filter $(MAKECMDGOALS),arm_tools arm_tools_version arm_tools_clean distclean),)
-  $(error "No toolchain found in $(TOOLCHAIN_DIR). Please run 'make arm_tools' first.")
+ifeq ($(filter $(MAKECMDGOALS),arm_tools_install arm_tools_version arm_tools_uninstall distclean),)
+  $(error "No toolchain found in $(TOOLCHAIN_DIR). Please run 'make arm_tools_install' first.")
 endif
 endif
 
