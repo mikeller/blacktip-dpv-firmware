@@ -77,6 +77,76 @@ make
 
 Use the [Vesc Tool](https://vesc-project.com/vesc_tool) (included for ubuntu, vesc_tool_1.16) to update the firmware. The firmware is in the build/ directory - BLDC_4_ChibiOS.elf
 
+## Trigger State Machine
+
+The Sikorski firmware implements a sophisticated trigger control system for dive propulsion vehicles. The trigger thread (`trigger_thread` in `applications/trigger.c`) manages user input through a finite state machine that handles various click patterns and timing sequences.
+
+### State Machine Diagram
+
+```mermaid
+stateDiagram-v2
+    [*] --> SWST_OFF
+    
+    SWST_OFF --> SWST_GOING_ON : SW_PRESSED
+    
+    SWST_GOING_ON --> SWST_ONE_OFF : SW_RELEASED
+    SWST_GOING_ON --> SWST_ON : TIMER_EXPIRY
+    
+    SWST_ON --> SWST_OFF : SW_RELEASED
+    
+    SWST_ONE_OFF --> SWST_ONE_ON : SW_PRESSED<br/>send_to_speed(SPEED_ON)
+    SWST_ONE_OFF --> SWST_OFF : TIMER_EXPIRY
+    
+    SWST_ONE_ON --> SWST_GOING_OFF : SW_RELEASED
+    SWST_ONE_ON --> SMART_CRUISE_DELAY : TIMER_EXPIRY<br/>Smart Cruise Enabled
+    
+    SWST_GOING_OFF --> SWST_CLICKED : SW_PRESSED
+    SWST_GOING_OFF --> SWST_OFF : TIMER_EXPIRY (no smart cruise)<br/>send_to_speed(SPEED_OFF)
+    SWST_GOING_OFF --> SMART_CRUISE_DELAY : TIMER_EXPIRY (smart cruise)
+    
+    SWST_CLICKED --> SWST_CLICKED_OFF : SW_RELEASED
+    SWST_CLICKED --> SWST_ONE_ON : TIMER_EXPIRY<br/>send_to_speed(SPEED_DOWN)
+    
+    SWST_CLICKED_OFF --> SWST_DOUBLE_CLICKED : SW_PRESSED
+    SWST_CLICKED_OFF --> SWST_OFF : TIMER_EXPIRY (no smart cruise)<br/>send_to_speed(SPEED_OFF)
+    SWST_CLICKED_OFF --> SMART_CRUISE_DELAY : TIMER_EXPIRY (smart cruise)
+    
+    SWST_DOUBLE_CLICKED --> SWST_DOUBLE_CLICKED_OFF : SW_RELEASED
+    SWST_DOUBLE_CLICKED --> SWST_ONE_ON : TIMER_EXPIRY<br/>send_to_speed(SPEED_UP)
+    
+    SWST_DOUBLE_CLICKED_OFF --> SWST_ONE_ON : SW_PRESSED
+    SWST_DOUBLE_CLICKED_OFF --> SWST_OFF : TIMER_EXPIRY<br/>Smart Cruise disabled<br/>send_to_speed(SPEED_OFF)
+    
+    SMART_CRUISE_DELAY --> SWST_ONE_ON : SW_PRESSED
+    SMART_CRUISE_DELAY --> SMART_CRUISE_WARN : TIMER_EXPIRY<br/>send_to_display(DISP_SPEED_B)
+    
+    SMART_CRUISE_WARN --> SWST_ONE_ON : SW_PRESSED
+    SMART_CRUISE_WARN --> SWST_OFF : TIMER_EXPIRY<br/>Smart Cruise timeout<br/>send_to_speed(SPEED_OFF)
+```
+
+### State Descriptions
+
+- **SWST_OFF**: Idle state, trigger has been off for a long time
+- **SWST_GOING_ON**: Initial trigger press, part of potential double-click sequence
+- **SWST_ON**: Trigger held down for extended period, motor not running
+- **SWST_ONE_OFF**: First part of double-click sequence completed
+- **SWST_ONE_ON**: Motor is running after successful double-click start
+- **SWST_GOING_OFF**: Trigger released while motor running, beginning speed adjustment sequence
+- **SWST_CLICKED**: Single click detected while motor running
+- **SWST_CLICKED_OFF**: Preparing for potential triple-click sequence
+- **SWST_DOUBLE_CLICKED**: Triple-click sequence in progress
+- **SWST_DOUBLE_CLICKED_OFF**: Triple-click completed, preparing for action
+- **SMART_CRUISE_DELAY**: Smart cruise mode active, waiting for timeout or input
+- **SMART_CRUISE_WARN**: Warning phase before smart cruise timeout
+
+### Control Sequences
+
+- **Double-click**: Turn motor on (`SWST_OFF` → `SWST_GOING_ON` → `SWST_ONE_OFF` → `SWST_ONE_ON`)
+- **Single-click while running**: Decrease speed (`SWST_ONE_ON` → `SWST_GOING_OFF` → `SWST_CLICKED` → speed down)
+- **Triple-click while running**: Increase speed (extends single-click sequence)
+- **Smart Cruise**: Automatic mode activated after 5 seconds of continuous operation
+- **Extended hold**: Display application version and enter continuous on mode
+
 ## License
 
 The software is released under the GNU General Public License version 3.0
