@@ -41,7 +41,7 @@ const char* message_text (MESSAGE msg_type)
     return messages[(int) msg_type - MESSAGES_BASE];
 }
 
-#define DISP_LOG(a) if(settings->logging & DISPLAY_LOG) commands_printf a
+#define SAFE_LOG(a) if(settings->logging & SAFETY_LOG) commands_printf a
 
 
 static sikorski_data *settings;
@@ -149,7 +149,7 @@ void check_batteries (void)
 
         batt_2 = batt_total = 0.0; // reset the totals
 
-        DISP_LOG(("TOTAL = %2.2f  BATT1 = %2.2f  BATT2 = %2.2f",
+        SAFE_LOG(("TOTAL = %2.2f  BATT1 = %2.2f  BATT2 = %2.2f",
             (double) GET_INPUT_VOLTAGE(), (double) batteries[0], (double) batteries[1] ));
     }
     chMtxUnlock(&batt_mutex);
