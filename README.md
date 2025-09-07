@@ -79,13 +79,15 @@ Use the [Vesc Tool](https://vesc-project.com/vesc_tool) (included for ubuntu, ve
 
 ## Smart Cruise Mode
 
+### 'Smart Cruise' Mode
+
 The Sikorski firmware implements an intelligent Smart Cruise Mode feature that automatically maintains propulsion without requiring continuous trigger input. This advanced system is built on a sophisticated trigger control state machine that manages user input through precise timing sequences and click patterns.
 
-### Overview
+#### Overview
 
 Smart Cruise Mode automatically activates after 5 seconds of continuous motor operation, allowing the diver to maintain speed without holding the trigger. The system includes a warning phase before timeout and can be controlled through specific trigger input patterns.
 
-### Trigger State Machine
+#### Trigger State Machine
 
 The Smart Cruise functionality is implemented through the trigger thread (`trigger_thread` in `applications/trigger.c`) using a finite state machine with the following behavior:
 
@@ -130,7 +132,7 @@ stateDiagram-v2
     SMART_CRUISE_WARN --> SWST_OFF : TIMER_EXPIRY<br/>Smart Cruise timeout<br/>send_to_speed(SPEED_OFF)
 ```
 
-### Smart Cruise States
+#### Smart Cruise States
 
 The Smart Cruise system utilizes specific states within the trigger state machine:
 
@@ -139,19 +141,19 @@ The Smart Cruise system utilizes specific states within the trigger state machin
 - **SWST_ONE_ON**: Normal motor operation that can transition to smart cruise after timer expiry
 - **SWST_GOING_OFF**: Released trigger state that can maintain smart cruise or turn off motor
 
-### Usage Patterns
+#### Usage Patterns
 
-#### Activating Smart Cruise
+##### Activating Smart Cruise
 1. **Double-click** to start motor: `SWST_OFF` → `SWST_ONE_ON` 
 2. **Wait 5 seconds** for automatic activation: `SWST_ONE_ON` → `SMART_CRUISE_DELAY`
 3. Motor continues running without trigger input
 
-#### Speed Control in Smart Cruise
+##### Speed Control in Smart Cruise
 - **Single-click**: Decrease speed while maintaining smart cruise
 - **Triple-click**: Increase speed while maintaining smart cruise  
 - **Any trigger input**: Immediately returns to active control from warning state
 
-#### Deactivating Smart Cruise
+##### Deactivating Smart Cruise
 - **Triple-click sequence**: Manually disable smart cruise and turn off motor
 - **Timeout**: System automatically turns off motor after warning period
 - **Any trigger input during warning**: Restart smart cruise timer
