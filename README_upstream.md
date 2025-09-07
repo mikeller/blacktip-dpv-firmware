@@ -1,23 +1,12 @@
-# Improved Firmware for the Dive Xtras Blacktip DPV (VESC based)
+# VESC firmware
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-
-This is a fork of the [manufacturer supplied](https://github.com/claroworks-product-development/Sikorski) firmware for the Dive Xtras Blacktip DPV (original [README](README_upstream.md)).
 
 An open source motor controller firmware.
 
 This is BASED ON the source code for the VESC DC/BLDC/FOC controller. Read more at  
 [https://vesc-project.com/](https://vesc-project.com/)
 
-
-## Improvements
-
-- 'Smart Cruise' mode
-
-
-### 'Smart Cruise' Mode
-
-Cruise along without having to hold down the trigger at all times. Do so in a save way as the motor will stop if no trigger activation is detected for some time (currently hardcoded to 30 seconds).
 
 
 ## Prerequisites
