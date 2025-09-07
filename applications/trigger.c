@@ -34,6 +34,7 @@
 #include "terminal.h"
 #include "settings.h"
 #include "app_version.h"
+#include "display.h"
 #include "speed.h" 	// thread handling the motor speed logic
 #include "trigger.h" // thread handling the trigger logic
 
@@ -54,12 +55,16 @@ typedef enum _sw_state
     SWST_ONE_ON,		// double click to start was successful (turn motor on)
     SWST_GOING_OFF,		// part of first click to adjust motor speed
     SWST_CLICKED,		// second part of a single click
-    SWST_CLCKD_OFF,		// third part of a double click
+    SWST_CLICKED_OFF, // third part of a double click
+    SWST_DOUBLE_CLICKED, // triple click on
+    SWST_DOUBLE_CLICKED_OFF, // triple click off
+    SMART_CRUISE_DELAY, // delay for smart cruise
+    SMART_CRUISE_WARN, // warn before the end of smart cruise mode
     SWST_EOL
 } SW_STATE;
 
 const char *const sw_states[] =
-    { "SWST_OFF", "SWST_GOING_ON", "SWST_ON", "SWST_ONE_OFF", "SWST_ONE_ON", "SWST_GOING_OFF", "SWST_CLICKED", "SWST_CLCKD_OFF" };
+    { "SWST_OFF", "SWST_GOING_ON", "SWST_ON", "SWST_ONE_OFF", "SWST_ONE_ON", "SWST_GOING_OFF", "SWST_CLICKED", "SWST_CLICKED_OFF", "SWST_DOUBLE_CLICKED", "SWST_DOUBLE_CLICKED_OFF", "SMART_CRUISE_DELAY", "SMART_CRUISE_WARN", };
 
 static THD_FUNCTION(trigger_thread, arg);
 static THD_WORKING_AREA(trigger_thread_wa, 2048);
@@ -85,6 +90,8 @@ static THD_FUNCTION(trigger_thread, arg) // @suppress("No return")
     chRegSetThreadName ("TRIGGER");
 
     SW_STATE state = SWST_OFF;
+
+    bool smart_cruise = false;
 
     // the message retrieved from the mailbox
     msg_t fetch = MSG_OK;
@@ -115,7 +122,7 @@ static THD_FUNCTION(trigger_thread, arg) // @suppress("No return")
             if (event == SW_PRESSED)
             {
                 state = SWST_GOING_ON;
-                timeout = MS2ST(settings->trig_on_time);
+                timeout = MS2ST(settings->trig_off_time);
             }
             break;
         case SWST_ON:
@@ -129,7 +136,7 @@ static THD_FUNCTION(trigger_thread, arg) // @suppress("No return")
             if (event == SW_RELEASED)
             {
                 state = SWST_ONE_OFF;
-                timeout = MS2ST(settings->trig_off_time);
+                timeout = MS2ST(settings->trig_on_time);
             }
             if (event == TIMER_EXPIRY)
             {
@@ -143,7 +150,7 @@ static THD_FUNCTION(trigger_thread, arg) // @suppress("No return")
             if (event == SW_PRESSED)
             {
                 state = SWST_ONE_ON;
-                timeout = TIME_INFINITE;
+                timeout = MS2ST(5000);
                 send_to_speed (SPEED_ON);
             }
             if (event == TIMER_EXPIRY)
@@ -158,6 +165,17 @@ static THD_FUNCTION(trigger_thread, arg) // @suppress("No return")
                 state = SWST_GOING_OFF;
                 timeout = MS2ST(settings->trig_on_time);
             }
+            if (event == TIMER_EXPIRY)
+            {
+                if (!smart_cruise)
+                {
+                    smart_cruise = true;
+                    send_to_display(DISP_SPEED_A);
+                    commands_printf("Smart Cruise Enabled");
+                }
+                state = SMART_CRUISE_DELAY;
+                timeout = MS2ST(25000);
+            }
             break;
         case SWST_GOING_OFF:
             if (event == SW_PRESSED)
@@ -167,36 +185,110 @@ static THD_FUNCTION(trigger_thread, arg) // @suppress("No return")
             }
             if (event == TIMER_EXPIRY)
             {
-                state = SWST_OFF;
-                timeout = TIME_INFINITE;
-                send_to_speed (SPEED_OFF);
+                if (!smart_cruise)
+                {
+                    state = SWST_OFF;
+                    timeout = TIME_INFINITE;
+                    send_to_speed (SPEED_OFF);
+                }
+                else
+                {
+                    state = SMART_CRUISE_DELAY;
+                    timeout = MS2ST(25000);
+                }
             }
             break;
         case SWST_CLICKED:
             if (event == SW_RELEASED)
             {
-                state = SWST_CLCKD_OFF;
+                state = SWST_CLICKED_OFF;
                 timeout = MS2ST(settings->trig_on_time);
             }
             if (event == TIMER_EXPIRY)
             {
                 state = SWST_ONE_ON;
-                timeout = TIME_INFINITE;
+                timeout = MS2ST(smart_cruise ? settings->trig_off_time : 5000);
                 send_to_speed (SPEED_DOWN);
             }
             break;
-        case SWST_CLCKD_OFF:
+        case SWST_CLICKED_OFF:
             if (event == SW_PRESSED)
             {
-                state = SWST_ONE_ON;
-                timeout = TIME_INFINITE;
-                send_to_speed (SPEED_UP);
+                state = SWST_DOUBLE_CLICKED;
+                timeout = MS2ST(settings->trig_off_time);
             }
             if (event == TIMER_EXPIRY)
             {
+                if (!smart_cruise)
+                {
+                    state = SWST_OFF;
+                    timeout = TIME_INFINITE;
+                    send_to_speed (SPEED_OFF);
+                }
+                else
+                {
+                    state = SMART_CRUISE_DELAY;
+                    timeout = MS2ST(25000);
+                }
+            }
+            break;
+        case SWST_DOUBLE_CLICKED:
+            if (event == SW_RELEASED)
+            {
+                state = SWST_DOUBLE_CLICKED_OFF;
+                timeout = MS2ST(settings->trig_on_time);
+            }
+            if (event == TIMER_EXPIRY)
+            {
+                state = SWST_ONE_ON;
+                timeout = MS2ST(smart_cruise ? settings->trig_off_time : 5000);
+                send_to_speed (SPEED_UP);
+            }
+            break;
+        case SWST_DOUBLE_CLICKED_OFF:
+            if (event == SW_PRESSED)
+            {
+                state = SWST_ONE_ON;
+                timeout = MS2ST(smart_cruise ? settings->trig_off_time : 5000);
+                //New Action
+            }
+            if (event == TIMER_EXPIRY)
+            {
+                // Turn off for real (override smart cruise)
+                smart_cruise = false;
                 state = SWST_OFF;
                 timeout = TIME_INFINITE;
                 send_to_speed (SPEED_OFF);
+                commands_printf("Smart Cruise disabled");
+            }
+            break;
+        case SMART_CRUISE_DELAY:
+            if (event == SW_PRESSED)
+            {
+                state = SWST_ONE_ON;
+                timeout = MS2ST(settings->trig_off_time);
+            }
+            if (event == TIMER_EXPIRY)
+            {
+                state = SMART_CRUISE_WARN;
+                timeout = MS2ST(5000);
+                send_to_display(DISP_SPEED_B);
+            }
+            break;
+        case SMART_CRUISE_WARN:
+            if (event == SW_PRESSED)
+            {
+                state = SWST_ONE_ON;
+                timeout = MS2ST(settings->trig_on_time);
+            }
+            if (event == TIMER_EXPIRY)
+            {
+                // Turn off for real
+                smart_cruise = false;
+                state = SWST_OFF;
+                timeout = TIME_INFINITE;
+                send_to_speed (SPEED_OFF);
+                commands_printf("Smart Cruise timeout");
             }
             break;
         default:
