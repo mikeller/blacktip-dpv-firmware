@@ -77,11 +77,17 @@ make
 
 Use the [Vesc Tool](https://vesc-project.com/vesc_tool) (included for ubuntu, vesc_tool_1.16) to update the firmware. The firmware is in the build/ directory - BLDC_4_ChibiOS.elf
 
-## Trigger State Machine
+## Smart Cruise Mode
 
-The Sikorski firmware implements a sophisticated trigger control system for dive propulsion vehicles. The trigger thread (`trigger_thread` in `applications/trigger.c`) manages user input through a finite state machine that handles various click patterns and timing sequences.
+The Sikorski firmware implements an intelligent Smart Cruise Mode feature that automatically maintains propulsion without requiring continuous trigger input. This advanced system is built on a sophisticated trigger control state machine that manages user input through precise timing sequences and click patterns.
 
-### State Machine Diagram
+### Overview
+
+Smart Cruise Mode automatically activates after 5 seconds of continuous motor operation, allowing the diver to maintain speed without holding the trigger. The system includes a warning phase before timeout and can be controlled through specific trigger input patterns.
+
+### Trigger State Machine
+
+The Smart Cruise functionality is implemented through the trigger thread (`trigger_thread` in `applications/trigger.c`) using a finite state machine with the following behavior:
 
 ```mermaid
 stateDiagram-v2
@@ -124,28 +130,31 @@ stateDiagram-v2
     SMART_CRUISE_WARN --> SWST_OFF : TIMER_EXPIRY<br/>Smart Cruise timeout<br/>send_to_speed(SPEED_OFF)
 ```
 
-### State Descriptions
+### Smart Cruise States
 
-- **SWST_OFF**: Idle state, trigger has been off for a long time
-- **SWST_GOING_ON**: Initial trigger press, part of potential double-click sequence
-- **SWST_ON**: Trigger held down for extended period, motor not running
-- **SWST_ONE_OFF**: First part of double-click sequence completed
-- **SWST_ONE_ON**: Motor is running after successful double-click start
-- **SWST_GOING_OFF**: Trigger released while motor running, beginning speed adjustment sequence
-- **SWST_CLICKED**: Single click detected while motor running
-- **SWST_CLICKED_OFF**: Preparing for potential triple-click sequence
-- **SWST_DOUBLE_CLICKED**: Triple-click sequence in progress
-- **SWST_DOUBLE_CLICKED_OFF**: Triple-click completed, preparing for action
-- **SMART_CRUISE_DELAY**: Smart cruise mode active, waiting for timeout or input
-- **SMART_CRUISE_WARN**: Warning phase before smart cruise timeout
+The Smart Cruise system utilizes specific states within the trigger state machine:
 
-### Control Sequences
+- **SMART_CRUISE_DELAY**: Active smart cruise mode - motor continues running without trigger input
+- **SMART_CRUISE_WARN**: Warning phase before timeout - displays speed warning to user
+- **SWST_ONE_ON**: Normal motor operation that can transition to smart cruise after timer expiry
+- **SWST_GOING_OFF**: Released trigger state that can maintain smart cruise or turn off motor
 
-- **Double-click**: Turn motor on (`SWST_OFF` → `SWST_GOING_ON` → `SWST_ONE_OFF` → `SWST_ONE_ON`)
-- **Single-click while running**: Decrease speed (`SWST_ONE_ON` → `SWST_GOING_OFF` → `SWST_CLICKED` → speed down)
-- **Triple-click while running**: Increase speed (extends single-click sequence)
-- **Smart Cruise**: Automatic mode activated after 5 seconds of continuous operation
-- **Extended hold**: Display application version and enter continuous on mode
+### Usage Patterns
+
+#### Activating Smart Cruise
+1. **Double-click** to start motor: `SWST_OFF` → `SWST_ONE_ON` 
+2. **Wait 5 seconds** for automatic activation: `SWST_ONE_ON` → `SMART_CRUISE_DELAY`
+3. Motor continues running without trigger input
+
+#### Speed Control in Smart Cruise
+- **Single-click**: Decrease speed while maintaining smart cruise
+- **Triple-click**: Increase speed while maintaining smart cruise  
+- **Any trigger input**: Immediately returns to active control from warning state
+
+#### Deactivating Smart Cruise
+- **Triple-click sequence**: Manually disable smart cruise and turn off motor
+- **Timeout**: System automatically turns off motor after warning period
+- **Any trigger input during warning**: Restart smart cruise timer
 
 ## License
 
