@@ -159,8 +159,21 @@ void display_speed (MESSAGE speed)
     GFX_setTextColor (LED_ON);
     LED_clear ();
     GFX_setCursor (1, 0);
-    char text[2] =
+    const char text[2] =
         { '0' + new_speed, '\0' };
+    GFX_print_str (text);
+    LED_writeDisplay ();
+    DISP_LOG(("Write '%s'", text));
+}
+
+void display_smart_cruise_status (bool isWarning)
+{
+    GFX_setRotation (settings->disp_rotation);
+    GFX_setTextSize (1);
+    GFX_setTextColor (LED_ON);
+    LED_clear ();
+    GFX_setCursor (1, 0);
+    const char *text = isWarning ? "W" : "S";
     GFX_print_str (text);
     LED_writeDisplay ();
     DISP_LOG(("Write '%s'", text));
@@ -284,6 +297,12 @@ static THD_FUNCTION(display_thread, arg) // @suppress("No return")
                 last_speed = event;
                 display_speed (last_speed);
                 timeout = MS2ST(settings->disp_on_ms);
+                break;
+            }
+            else if (event >= DISP_SPEED_A && event <= DISP_SPEED_B)
+            {
+                display_smart_cruise_status(event == DISP_SPEED_B);
+                timeout = MS2ST(5000);
                 break;
             }
             switch (event)
