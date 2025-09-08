@@ -17,7 +17,7 @@ This is BASED ON the source code for the VESC DC/BLDC/FOC controller. Read more 
 
 ### 'Smart Cruise' Mode
 
-The Sikorski firmware implements an intelligent Smart Cruise Mode feature that automatically maintains propulsion without requiring continuous trigger input. This advanced system is built on a sophisticated trigger control state machine that manages user input through precise timing sequences and click patterns.
+Cruise along without having to hold down the trigger at all times. Do so in a save way as the motor will stop if no trigger activation is detected for some time (currently hardcoded to 30 seconds).
 
 #### Overview
 
