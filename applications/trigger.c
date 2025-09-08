@@ -38,7 +38,7 @@
 #include "speed.h" // thread handling the motor speed logic
 #include "trigger.h" // thread handling the trigger logic
 
-#define TRIG_LOG(a) if(settings->logging & TRIGGER_LOG) commands_printf a
+#define TRIG_LOG(fmt, ...) do { if (settings != NULL && settings->logging & TRIGGER_LOG) commands_printf(fmt, ##__VA_ARGS__); } while (0)
 
 // Smart Cruise timing constants
 #define SMART_CRUISE_ACTIVATION_HOLD_MS 5000   // Time to hold trigger before Smart Cruise activates
@@ -68,7 +68,7 @@ typedef enum _sw_state
     SWST_EOL
 } SW_STATE;
 
-const char *const sw_states[] =
+const char *const sw_states[SWST_EOL] =
     { "SWST_OFF", "SWST_GOING_ON", "SWST_ON", "SWST_ONE_OFF", "SWST_ONE_ON", "SWST_GOING_OFF", "SWST_CLICKED", "SWST_CLICKED_OFF", "SWST_DOUBLE_CLICKED", "SWST_DOUBLE_CLICKED_OFF", "SMART_CRUISE_DELAY", "SMART_CRUISE_WARN", };
 
 static THD_FUNCTION(trigger_thread, arg);
@@ -118,7 +118,7 @@ static THD_FUNCTION(trigger_thread, arg) // @suppress("No return")
         if (fetch == MSG_TIMEOUT)
             event = TIMER_EXPIRY;
 
-        TRIG_LOG(("TRIGGER State = %s, Event = 0x%x", sw_states[state], event));
+        TRIG_LOG("TRIGGER State = %s, Event = 0x%x", sw_states[state], event);
         SW_STATE old_state = state;
 
         switch (state)
@@ -175,7 +175,7 @@ static THD_FUNCTION(trigger_thread, arg) // @suppress("No return")
                 if (!smart_cruise)
                 {
                     smart_cruise = true;
-                    commands_printf("Smart Cruise Enabled");
+                    TRIG_LOG("Smart Cruise Enabled");
                 }
                 state = SMART_CRUISE_DELAY;
                 timeout = MS2ST(SMART_CRUISE_DELAY_MS);
@@ -266,7 +266,7 @@ static THD_FUNCTION(trigger_thread, arg) // @suppress("No return")
                 state = SWST_OFF;
                 timeout = TIME_INFINITE;
                 send_to_speed (SPEED_OFF);
-                commands_printf("Smart Cruise disabled");
+                TRIG_LOG("Smart Cruise disabled");
             }
             break;
         case SMART_CRUISE_DELAY:
@@ -295,7 +295,7 @@ static THD_FUNCTION(trigger_thread, arg) // @suppress("No return")
                 state = SWST_OFF;
                 timeout = TIME_INFINITE;
                 send_to_speed (SPEED_OFF);
-                commands_printf("Smart Cruise timeout");
+                TRIG_LOG("Smart Cruise timeout");
             }
             break;
         default:
@@ -303,6 +303,6 @@ static THD_FUNCTION(trigger_thread, arg) // @suppress("No return")
         }
 
         if (old_state != state)
-            TRIG_LOG(("NEW State = %s", sw_states[state]));
+            TRIG_LOG("NEW State = %s", sw_states[state]);
     }
 }
