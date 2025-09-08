@@ -159,7 +159,7 @@ void display_speed (MESSAGE speed)
     GFX_setTextColor (LED_ON);
     LED_clear ();
     GFX_setCursor (1, 0);
-    char text[2] =
+    const char text[2] =
         { '0' + new_speed, '\0' };
     GFX_print_str (text);
     LED_writeDisplay ();
@@ -173,7 +173,7 @@ void display_smart_cruise_status (bool isWarning)
     GFX_setTextColor (LED_ON);
     LED_clear ();
     GFX_setCursor (1, 0);
-    char *text = isWarning ? "W" : "S";
+    const char *text = isWarning ? "W" : "S";
     GFX_print_str (text);
     LED_writeDisplay ();
     DISP_LOG(("Write '%s'", text));

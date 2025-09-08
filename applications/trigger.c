@@ -1,12 +1,12 @@
 /*
-	Copyright 2019 Claroworks
+    Copyright 2019 Claroworks
 
-	written by Mike Wilson mail4mikew@gmail.com
+    written by Mike Wilson mail4mikew@gmail.com
 
-	This file is part of an application designed to work with VESC firmware,
-	and is intended for use with dive propulsion vehicles.
+    This file is part of an application designed to work with VESC firmware,
+    and is intended for use with dive propulsion vehicles.
 
-	This firmware is free software: you can redistribute it and/or modify
+    This firmware is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
@@ -21,7 +21,7 @@
 */
 
 // This file defines a thread that takes switch events and performs timing and
-//		logic to determine user trigger actions.
+// logic to determine user trigger actions.
 // The actions are then sent to the speed control thread.
 //
 #include <stddef.h>
@@ -35,7 +35,7 @@
 #include "settings.h"
 #include "app_version.h"
 #include "display.h"
-#include "speed.h" 	// thread handling the motor speed logic
+#include "speed.h" // thread handling the motor speed logic
 #include "trigger.h" // thread handling the trigger logic
 
 #define TRIG_LOG(a) if(settings->logging & TRIGGER_LOG) commands_printf a
@@ -48,13 +48,13 @@ static sikorski_data * settings;
 
 typedef enum _sw_state
 {
-    SWST_OFF = 0,		// idle state, off trigger for long time
-    SWST_GOING_ON,      // initial trigger on, part of double click to turn on
-    SWST_ON,			// on trigger for a long time, motor not running
-    SWST_ONE_OFF,		// part of double click just before turning motor on
-    SWST_ONE_ON,		// double click to start was successful (turn motor on)
-    SWST_GOING_OFF,		// part of first click to adjust motor speed
-    SWST_CLICKED,		// second part of a single click
+    SWST_OFF = 0, // idle state, off trigger for long time
+    SWST_GOING_ON, // initial trigger on, part of double click to turn on
+    SWST_ON, // on trigger for a long time, motor not running
+    SWST_ONE_OFF, // part of double click just before turning motor on
+    SWST_ONE_ON, // double click to start was successful (turn motor on)
+    SWST_GOING_OFF, // part of first click to adjust motor speed
+    SWST_CLICKED, // second part of a single click
     SWST_CLICKED_OFF, // third part of a double click
     SWST_DOUBLE_CLICKED, // triple click on
     SWST_DOUBLE_CLICKED_OFF, // triple click off
@@ -170,11 +170,11 @@ static THD_FUNCTION(trigger_thread, arg) // @suppress("No return")
                 if (!smart_cruise)
                 {
                     smart_cruise = true;
-                    send_to_display(DISP_SPEED_A);
                     commands_printf("Smart Cruise Enabled");
                 }
                 state = SMART_CRUISE_DELAY;
                 timeout = MS2ST(25000);
+                send_to_display(DISP_SPEED_A);
             }
             break;
         case SWST_GOING_OFF:
@@ -195,6 +195,7 @@ static THD_FUNCTION(trigger_thread, arg) // @suppress("No return")
                 {
                     state = SMART_CRUISE_DELAY;
                     timeout = MS2ST(25000);
+                    send_to_display(DISP_SPEED_A);
                 }
             }
             break;
@@ -229,6 +230,7 @@ static THD_FUNCTION(trigger_thread, arg) // @suppress("No return")
                 {
                     state = SMART_CRUISE_DELAY;
                     timeout = MS2ST(25000);
+                    send_to_display(DISP_SPEED_A);
                 }
             }
             break;
