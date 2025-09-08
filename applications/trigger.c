@@ -40,6 +40,11 @@
 
 #define TRIG_LOG(a) if(settings->logging & TRIGGER_LOG) commands_printf a
 
+// Smart Cruise timing constants
+#define SMART_CRUISE_ACTIVATION_HOLD_MS 5000   // Time to hold trigger before Smart Cruise activates
+#define SMART_CRUISE_DELAY_MS           25000  // Smart Cruise active duration before warning
+#define SMART_CRUISE_WARN_MS            5000   // Warning period before automatic timeout
+
 #define QUEUE_SZ 4
 static msg_t msg_queue[QUEUE_SZ];
 mailbox_t trigger_mbox;
@@ -150,7 +155,7 @@ static THD_FUNCTION(trigger_thread, arg) // @suppress("No return")
             if (event == SW_PRESSED)
             {
                 state = SWST_ONE_ON;
-                timeout = MS2ST(5000);
+                timeout = MS2ST(SMART_CRUISE_ACTIVATION_HOLD_MS);
                 send_to_speed (SPEED_ON);
             }
             if (event == TIMER_EXPIRY)
@@ -173,7 +178,7 @@ static THD_FUNCTION(trigger_thread, arg) // @suppress("No return")
                     commands_printf("Smart Cruise Enabled");
                 }
                 state = SMART_CRUISE_DELAY;
-                timeout = MS2ST(25000);
+                timeout = MS2ST(SMART_CRUISE_DELAY_MS);
                 send_to_display(DISP_SPEED_A);
             }
             break;
@@ -194,7 +199,7 @@ static THD_FUNCTION(trigger_thread, arg) // @suppress("No return")
                 else
                 {
                     state = SMART_CRUISE_DELAY;
-                    timeout = MS2ST(25000);
+                    timeout = MS2ST(SMART_CRUISE_DELAY_MS);
                     send_to_display(DISP_SPEED_A);
                 }
             }
@@ -208,7 +213,7 @@ static THD_FUNCTION(trigger_thread, arg) // @suppress("No return")
             if (event == TIMER_EXPIRY)
             {
                 state = SWST_ONE_ON;
-                timeout = MS2ST(smart_cruise ? settings->trig_off_time : 5000);
+                timeout = MS2ST(smart_cruise ? settings->trig_off_time : SMART_CRUISE_ACTIVATION_HOLD_MS);
                 send_to_speed (SPEED_DOWN);
             }
             break;
@@ -229,7 +234,7 @@ static THD_FUNCTION(trigger_thread, arg) // @suppress("No return")
                 else
                 {
                     state = SMART_CRUISE_DELAY;
-                    timeout = MS2ST(25000);
+                    timeout = MS2ST(SMART_CRUISE_DELAY_MS);
                     send_to_display(DISP_SPEED_A);
                 }
             }
@@ -243,7 +248,7 @@ static THD_FUNCTION(trigger_thread, arg) // @suppress("No return")
             if (event == TIMER_EXPIRY)
             {
                 state = SWST_ONE_ON;
-                timeout = MS2ST(smart_cruise ? settings->trig_off_time : 5000);
+                timeout = MS2ST(smart_cruise ? settings->trig_off_time : SMART_CRUISE_ACTIVATION_HOLD_MS);
                 send_to_speed (SPEED_UP);
             }
             break;
@@ -251,7 +256,7 @@ static THD_FUNCTION(trigger_thread, arg) // @suppress("No return")
             if (event == SW_PRESSED)
             {
                 state = SWST_ONE_ON;
-                timeout = MS2ST(smart_cruise ? settings->trig_off_time : 5000);
+                timeout = MS2ST(smart_cruise ? settings->trig_off_time : SMART_CRUISE_ACTIVATION_HOLD_MS);
                 //New Action
             }
             if (event == TIMER_EXPIRY)
@@ -273,7 +278,7 @@ static THD_FUNCTION(trigger_thread, arg) // @suppress("No return")
             if (event == TIMER_EXPIRY)
             {
                 state = SMART_CRUISE_WARN;
-                timeout = MS2ST(5000);
+                timeout = MS2ST(SMART_CRUISE_WARN_MS);
                 send_to_display(DISP_SPEED_B);
             }
             break;
